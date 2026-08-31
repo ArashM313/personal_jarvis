@@ -19,9 +19,12 @@ Rules:
 - If a task is impossible with your tools, say so clearly and suggest the closest alternative.
 - Keep answers concise and friendly, like a calm and competent butler."""
 
+VOICE_RULES = """
+- VOICE MODE: your reply will be spoken aloud. Keep it short (2-4 sentences), natural and conversational. No lists, no markdown symbols, no emojis, no code blocks."""
+
 
 class Agent:
-    def __init__(self):
+    def __init__(self, extra_rules: str = ""):
         self.client = OpenAI(
             api_key=Config.LLM_API_KEY or "not-needed",
             base_url=Config.LLM_BASE_URL,
@@ -29,7 +32,7 @@ class Agent:
         self.tools = get_tools()
         self.router = ModelRouter(Config.MODEL_CHAIN)
         self.memory = Memory(Config.HISTORY_FILE)
-        self.messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        self.messages = [{"role": "system", "content": SYSTEM_PROMPT + extra_rules}]
         self.messages += self.memory.load()
         self.max_tool_rounds = 8
         self.quality_fails = 0
