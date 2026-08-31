@@ -1,4 +1,5 @@
 import json
+import time
 
 from openai import OpenAI
 
@@ -17,10 +18,11 @@ Rules:
 - Match the user's language: if they write in Persian, answer in Persian; if English, answer in English.
 - After finishing, report briefly what you did.
 - If a task is impossible with your tools, say so clearly and suggest the closest alternative.
-- Keep answers concise and friendly, like a calm and competent butler."""
+- Keep answers concise and friendly, like a calm and competent butler.
+- When a task needs several tools, call as many of them as possible in a single response (batch tool calls) instead of one per turn."""
 
 VOICE_RULES = """
-- VOICE MODE: your reply will be spoken aloud. Keep it short (2-4 sentences), natural and conversational. No lists, no markdown symbols, no emojis, no code blocks."""
+- VOICE MODE: the user speaks ENGLISH commands by voice. Reply in English, spoken aloud. After finishing any tool work, reply with ONE short natural sentence (under 20 words) — never lists, bullets, steps, markdown, emojis, or code blocks. If the request was transcribed imperfectly, make your best guess from context instead of asking about typos."""
 
 
 class Agent:
@@ -41,7 +43,9 @@ class Agent:
         """Process one user message and return JARVIS's final text answer."""
         self.router.pick_best_available()
         self.messages.append({"role": "user", "content": user_text})
+        t0 = time.perf_counter()
         final_text = self._run_tool_loop()
+        print(f"   ⏱ total LLM time: {time.perf_counter() - t0:.1f}s")
         self.messages.append({"role": "assistant", "content": final_text})
         self.memory.save(self._persistable())
         return final_text
@@ -51,7 +55,6 @@ class Agent:
         for _ in range(self.max_tool_rounds):
             msg = self._chat(use_tools=True).choices[0].message
 
-            # Weakness signal 1: empty answer (no text, no tool call)
             if not msg.tool_calls and not (msg.content or "").strip():
                 if self._escalate("empty response"):
                     continue
@@ -71,31 +74,48 @@ class Agent:
                     "content": result,
                 })
 
-            # Weakness signal 2: repeated invalid tool usage
             if self.quality_fails >= 3 and self._escalate("repeated invalid tool calls"):
                 continue
 
-        # Round limit reached: try the next (stronger) model once, then force a plain answer
         if self._escalate("max rounds reached"):
             return self._run_tool_loop()
         msg = self._chat(use_tools=False).choices[0].message
         return (msg.content or "").strip() or "(no progress — try /new)"
 
+    def _view(self) -> list:
+        """System prompt + a trimmed recent window (starts on a 'user' boundary
+        so we never send a broken tool-call sequence)."""
+        limit = Config.LLM_MAX_CONTEXT_MESSAGES
+        if len(self.messages) <= limit:
+            return self.messages
+        window = self.messages[-limit:]
+        i = 0
+        while i < len(window) and window[i].get("role") != "user":
+            i += 1  # skip a partial tool exchange at the cut point
+        if i >= len(window):
+            return self.messages
+        return [self.messages[0]] + window[i:]
+
     def _chat(self, use_tools: bool):
         kwargs = {
             "model": self.router.current,
-            "messages": self.messages,
+            "messages": self._view(),
             "temperature": 0.3,
         }
+        if Config.LLM_EXTRA_BODY:
+            kwargs["extra_body"] = Config.LLM_EXTRA_BODY
         if use_tools:
             kwargs["tools"] = self.tools
+        t0 = time.perf_counter()
         try:
-            return self.client.chat.completions.create(**kwargs)
+            resp = self.client.chat.completions.create(**kwargs)
         except Exception as exc:
             nxt = self.router.advance(f"API error: {type(exc).__name__}")
             if nxt is None:
                 raise
             return self._chat(use_tools)
+        print(f"   ⏱ {self.router.current}: {time.perf_counter() - t0:.1f}s")
+        return resp
 
     def _escalate(self, reason: str) -> bool:
         nxt = self.router.advance(reason)
@@ -123,7 +143,6 @@ class Agent:
         }
 
     def _execute(self, tc) -> tuple:
-        """Run a tool call. Returns (ok: bool, result: str) — ok=False counts as a quality failure."""
         name = tc.function.name
         try:
             args = json.loads(tc.function.arguments or "{}")
