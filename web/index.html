@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>J.A.R.V.I.S</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="title">J.A.R.V.I.S</div>
+    <div class="controls">
+      <button id="wakeBtn" title="Toggle awake/sleeping">Wake</button>
+      <button id="newBtn" title="New session">New session</button>
+    </div>
+  </header>
+
+  <div id="orbWrap">
+    <div id="orb" class="sleeping"><div class="core"></div></div>
+    <div id="status">SLEEPING — say "Jarvis wake up"</div>
+  </div>
+
+  <main id="chat"></main>
+
+  <aside id="feed">
+    <div class="feed-title">ACTIVITY</div>
+    <div id="feedItems"></div>
+  </aside>
+
+  <footer>
+    <button id="micBtn" title="Record (works best while JARVIS is sleeping)">🎙</button>
+    <input id="input" type="text" placeholder="Type a command…" autocomplete="off">
+    <button id="sendBtn">Send</button>
+  </footer>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

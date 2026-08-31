@@ -14,10 +14,22 @@ from skills.base import skill
 
 
 # ---------- apps ----------
+APP_ALIASES = {
+    "chrome": ["cmd", "/c", "start", "chrome"],
+    "edge": ["cmd", "/c", "start", "msedge"],
+    "firefox": ["cmd", "/c", "start", "firefox"],
+    "vscode": ["code"],
+    "code": ["code"],
+    "spotify": ["cmd", "/c", "start", "spotify"],
+    "task manager": ["cmd", "/c", "start", "taskmgr"],
+    "settings": ["cmd", "/c", "start", "ms-settings:"],
+}
+
+
 @skill(
-    description="Open an application, file, or folder on Windows. Use an app name like "
-                "'notepad', 'calc', 'mspaint', 'explorer', 'cmd' or a full path like "
-                "'C:/Users/Me/Desktop/report.docx'.",
+    description="Open an application, file, or folder on Windows. Knows common aliases: "
+                "chrome, edge, firefox, vscode/code, spotify, task manager, settings, "
+                "notepad, calc, mspaint, explorer, cmd. Also accepts full paths.",
     parameters={
         "type": "object",
         "properties": {"target": {"type": "string", "description": "App name or full path"}},
@@ -25,6 +37,13 @@ from skills.base import skill
     },
 )
 def open_app(target: str) -> str:
+    key = target.strip().lower()
+    if key in APP_ALIASES:
+        try:
+            subprocess.Popen(APP_ALIASES[key])
+            return f"Opened: {target}"
+        except Exception as exc:
+            return f"Could not open '{target}': {exc}"
     try:
         os.startfile(target)
         return f"Opened: {target}"

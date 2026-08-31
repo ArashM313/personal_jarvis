@@ -13,20 +13,23 @@ SYSTEM_PROMPT = """You are JARVIS, a desktop assistant running on the user's Win
 
 Rules:
 - Complete the user's tasks using the available tools whenever an action is needed. You may chain several tools in a row.
+- When a task needs several tools, call as many of them as possible in a single response (batch tool calls) instead of one per turn.
 - If a tool returns an error, read the error and try a smarter approach (e.g. fix the path) instead of giving up immediately.
 - Destructive actions are confirmed by the system automatically; never repeat the confirmation, just briefly explain what the action does.
 - Match the user's language: if they write in Persian, answer in Persian; if English, answer in English.
 - After finishing, report briefly what you did.
 - If a task is impossible with your tools, say so clearly and suggest the closest alternative.
-- Keep answers concise and friendly, like a calm and competent butler.
-- When a task needs several tools, call as many of them as possible in a single response (batch tool calls) instead of one per turn."""
+- Keep answers concise and friendly, like a calm and competent butler."""
 
 VOICE_RULES = """
-- VOICE MODE: the user speaks ENGLISH commands by voice. Reply in English, spoken aloud. After finishing any tool work, reply with ONE short natural sentence (under 20 words) — never lists, bullets, steps, markdown, emojis, or code blocks. If the request was transcribed imperfectly, make your best guess from context instead of asking about typos."""
+- VOICE MODE: the user speaks ENGLISH commands by voice. Reply in English, spoken aloud.
+- PERSONA: you are JARVIS from Iron Man — calm, impeccable, dry British wit, subtly humorous, never gushing. Address the user as "Sir" (once per reply is enough — natural, not robotic).
+- Keep replies to ONE short sentence (under 20 words). Never lists, bullets, steps, markdown, emojis, or code blocks.
+- If the request was transcribed imperfectly, make your best guess from context instead of asking about typos."""
 
 
 class Agent:
-    def __init__(self, extra_rules: str = ""):
+    def __init__(self, extra_rules: str = "", bus=None):
         self.client = OpenAI(
             api_key=Config.LLM_API_KEY or "not-needed",
             base_url=Config.LLM_BASE_URL,
@@ -38,9 +41,13 @@ class Agent:
         self.messages += self.memory.load()
         self.max_tool_rounds = 8
         self.quality_fails = 0
+        self.bus = bus  # optional EventBus for live UIs
+
+    def _emit(self, type_: str, **data) -> None:
+        if self.bus:
+            self.bus.publish(type_, **data)
 
     def send(self, user_text: str) -> str:
-        """Process one user message and return JARVIS's final text answer."""
         self.router.pick_best_available()
         self.messages.append({"role": "user", "content": user_text})
         t0 = time.perf_counter()
@@ -83,15 +90,13 @@ class Agent:
         return (msg.content or "").strip() or "(no progress — try /new)"
 
     def _view(self) -> list:
-        """System prompt + a trimmed recent window (starts on a 'user' boundary
-        so we never send a broken tool-call sequence)."""
         limit = Config.LLM_MAX_CONTEXT_MESSAGES
         if len(self.messages) <= limit:
             return self.messages
         window = self.messages[-limit:]
         i = 0
         while i < len(window) and window[i].get("role") != "user":
-            i += 1  # skip a partial tool exchange at the cut point
+            i += 1
         if i >= len(window):
             return self.messages
         return [self.messages[0]] + window[i:]
@@ -150,10 +155,12 @@ class Agent:
             print(f"   🔧 {name}(invalid JSON arguments)")
             return False, "Error: the arguments were not valid JSON. Call the tool again with correct JSON."
         print(f"   🔧 {name}({args})")
+        self._emit("tool_call", name=name, args=args)
         if is_dangerous(name) and not self._confirm(name, args):
             return True, "USER_DENIED: the user did not allow this action."
         result = execute_skill(name, args)
         print(f"      ↳ {result[:150]}")
+        self._emit("tool_result", name=name, result=result[:300])
         return (not result.startswith("Error")), result
 
     @staticmethod

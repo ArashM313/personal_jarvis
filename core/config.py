@@ -18,6 +18,10 @@ def _parse_extra_body(raw: str) -> dict:
         return {}
 
 
+def _csv(raw: str) -> list:
+    return [w.strip().lower() for w in (raw or "").split(",") if w.strip()]
+
+
 class Config:
     # --- brain (LLM) ---
     LLM_API_KEY = os.getenv("LLM_API_KEY", "")
@@ -26,10 +30,11 @@ class Config:
     LLM_MODEL = os.getenv("LLM_MODEL", "qwen-plus")
     MODEL_CHAIN = ([m.strip() for m in os.getenv("MODEL_CHAIN", "").split(",") if m.strip()]
                    or [LLM_MODEL])
-    # Speed: cap how much history is sent per request; extra provider options
-    # (e.g. disable hidden "thinking") are injected into the raw request body.
     LLM_MAX_CONTEXT_MESSAGES = int(os.getenv("LLM_MAX_CONTEXT_MESSAGES", "24"))
     LLM_EXTRA_BODY = _parse_extra_body(os.getenv("LLM_EXTRA_BODY", ""))
+
+    # --- GUI ---
+    GUI_PORT = int(os.getenv("GUI_PORT", "8000"))
 
     # --- storage ---
     HISTORY_FILE = str(BASE_DIR / "data" / "history.json")
@@ -41,8 +46,15 @@ class Config:
     STT_MODEL = os.getenv("STT_MODEL", "whisper-large-v3-turbo")
     VOICE_STT_MODEL = os.getenv("VOICE_STT_MODEL", "large-v3-turbo")
     VOICE_LANG = os.getenv("VOICE_LANG", "en")                    # en | fa | auto
-    VOICE_SILENCE_SECS = float(os.getenv("VOICE_SILENCE_SECS", "3.0"))
+
+    # --- continuous mode (phase 4) ---
+    WAKE_WORDS = _csv(os.getenv("WAKE_WORDS", "jarvis,jervis,javis"))
+    AMBIENT_STT_MODEL = os.getenv("AMBIENT_STT_MODEL", "tiny.en")  # always-on wake listener
+    AUTO_SLEEP_SECS = int(os.getenv("AUTO_SLEEP_SECS", "180"))     # idle -> sleep
 
     # --- mouth (TTS) ---
     VOICE_FA = os.getenv("VOICE_FA", "fa-IR-FaridNeural")
     VOICE_EN = os.getenv("VOICE_EN", "en-US-GuyNeural")
+
+    # --- recording ---
+    VOICE_SILENCE_SECS = float(os.getenv("VOICE_SILENCE_SECS", "3.0"))

@@ -3,25 +3,36 @@ import sys
 from core.agent import Agent
 from core.config import Config
 from core.device import get_device
-from interfaces.terminal import TerminalInterface
-from interfaces.voice import VoiceInterface
+from core.events import EventBus
+from interfaces.base import BaseInterface
 from skills.base import SKILLS
 
 BANNER = r"""
 ╔══════════════════════════════════════════════╗
-║      J.A.R.V.I.S  —  Phase 3: Voice          ║
+║                J.A.R.V.I.S                   ║
 ╚══════════════════════════════════════════════╝"""
 
 
-def pick_interface():
+def pick_interface() -> BaseInterface:
     args = sys.argv[1:]
     if "--text" in args:
+        from interfaces.terminal import TerminalInterface
         return TerminalInterface()
     if "--voice" in args:
+        from interfaces.voice import VoiceInterface
         return VoiceInterface()
-    # no flag? ask once
-    choice = input("Mode — [1] text  [2] voice  (default 1): ").strip()
-    return VoiceInterface() if choice == "2" else TerminalInterface()
+    if "--gui" in args:
+        from interfaces.gui import GuiInterface
+        return GuiInterface(EventBus())
+    choice = input("Mode — [1] text  [2] voice  [3] GUI (default 1): ").strip()
+    if choice == "2":
+        from interfaces.voice import VoiceInterface
+        return VoiceInterface()
+    if choice == "3":
+        from interfaces.gui import GuiInterface
+        return GuiInterface(EventBus())
+    from interfaces.terminal import TerminalInterface
+    return TerminalInterface()
 
 
 def main():
@@ -30,8 +41,11 @@ def main():
         print("❌ No API key found! Set LLM_API_KEY in .env")
         sys.exit(1)
 
+    bus = EventBus()
     iface = pick_interface()
-    agent = Agent(extra_rules=iface.extra_rules)
+    if hasattr(iface, "bus") and getattr(iface, "bus") is None:
+        iface.bus = bus
+    agent = Agent(extra_rules=iface.extra_rules, bus=bus)
 
     print(BANNER)
     print(f"   Chain   : {' → '.join(Config.MODEL_CHAIN)}")
