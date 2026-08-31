@@ -2,6 +2,7 @@ import webbrowser
 from urllib.parse import quote
 
 import requests
+import re
 
 from skills.base import skill
 
@@ -50,3 +51,25 @@ def get_weather(city: str) -> str:
         return r.text.strip()
     except Exception as exc:
         return f"Weather request failed: {exc}"
+
+@skill(
+    description="Play a song/video on YouTube: searches, picks the FIRST result and opens it "
+                "so playback starts. Use this when the user says 'play <something>'. "
+                "For just searching, use search_youtube instead.",
+    parameters={"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]},
+)
+def play_on_youtube(query: str) -> str:
+    try:
+        html = requests.get(
+            f"https://www.youtube.com/results?search_query={quote(query)}",
+            headers={"User-Agent": "Mozilla/5.0", "Accept-Language": "en-US,en;q=0.9"},
+            timeout=15,
+        ).text
+        match = re.search(r'"videoId":"([\w-]{11})"', html)
+        if not match:
+            return "No results found on YouTube."
+        url = f"https://www.youtube.com/watch?v={match.group(1)}"
+        webbrowser.open(url)
+        return f"Playing first result for '{query}': {url}"
+    except Exception as exc:
+        return f"YouTube playback failed: {type(exc).__name__}: {exc}"

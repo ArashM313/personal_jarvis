@@ -6,6 +6,7 @@ import skills  # noqa: F401  (importing registers all skills)
 from skills.base import execute_skill, get_tools, is_dangerous
 from core.config import Config
 from core.memory import Memory
+from core.router import ModelRouter
 
 SYSTEM_PROMPT = """You are JARVIS, a desktop assistant running on the user's Windows PC.
 
@@ -25,16 +26,17 @@ class Agent:
             api_key=Config.LLM_API_KEY or "not-needed",
             base_url=Config.LLM_BASE_URL,
         )
-        self.model = Config.LLM_MODEL
         self.tools = get_tools()
+        self.router = ModelRouter(Config.MODEL_CHAIN)
         self.memory = Memory(Config.HISTORY_FILE)
-        # System prompt is always fresh (not persisted), rest of history is loaded
         self.messages = [{"role": "system", "content": SYSTEM_PROMPT}]
         self.messages += self.memory.load()
         self.max_tool_rounds = 8
+        self.quality_fails = 0
 
     def send(self, user_text: str) -> str:
         """Process one user message and return JARVIS's final text answer."""
+        self.router.pick_best_available()
         self.messages.append({"role": "user", "content": user_text})
         final_text = self._run_tool_loop()
         self.messages.append({"role": "assistant", "content": final_text})
@@ -42,33 +44,65 @@ class Agent:
         return final_text
 
     def _run_tool_loop(self) -> str:
+        self.quality_fails = 0
         for _ in range(self.max_tool_rounds):
             msg = self._chat(use_tools=True).choices[0].message
+
+            # Weakness signal 1: empty answer (no text, no tool call)
+            if not msg.tool_calls and not (msg.content or "").strip():
+                if self._escalate("empty response"):
+                    continue
+                return "(model returned an empty response — try rephrasing or /new)"
+
             if not msg.tool_calls:
                 return (msg.content or "").strip() or "(no text response)"
 
             self.messages.append(self._serialize_assistant(msg))
             for tc in msg.tool_calls:
-                result = self._execute(tc)
+                ok, result = self._execute(tc)
+                if not ok:
+                    self.quality_fails += 1
                 self.messages.append({
                     "role": "tool",
                     "tool_call_id": tc.id,
                     "content": result,
                 })
 
-        # Round limit reached: force a plain-text answer without tools
+            # Weakness signal 2: repeated invalid tool usage
+            if self.quality_fails >= 3 and self._escalate("repeated invalid tool calls"):
+                continue
+
+        # Round limit reached: try the next (stronger) model once, then force a plain answer
+        if self._escalate("max rounds reached"):
+            return self._run_tool_loop()
         msg = self._chat(use_tools=False).choices[0].message
-        return (msg.content or "").strip() or "(The model kept calling tools — try /new.)"
+        return (msg.content or "").strip() or "(no progress — try /new)"
 
     def _chat(self, use_tools: bool):
-        kwargs = {"model": self.model, "messages": self.messages, "temperature": 0.3}
+        kwargs = {
+            "model": self.router.current,
+            "messages": self.messages,
+            "temperature": 0.3,
+        }
         if use_tools:
             kwargs["tools"] = self.tools
-        return self.client.chat.completions.create(**kwargs)
+        try:
+            return self.client.chat.completions.create(**kwargs)
+        except Exception as exc:
+            nxt = self.router.advance(f"API error: {type(exc).__name__}")
+            if nxt is None:
+                raise
+            return self._chat(use_tools)
+
+    def _escalate(self, reason: str) -> bool:
+        nxt = self.router.advance(reason)
+        if nxt is None:
+            return False
+        self.quality_fails = 0
+        return True
 
     @staticmethod
     def _serialize_assistant(msg) -> dict:
-        """Convert a response message into a storable/replayable dict."""
         return {
             "role": "assistant",
             "content": msg.content or "",
@@ -85,15 +119,20 @@ class Agent:
             ],
         }
 
-    def _execute(self, tc) -> str:
+    def _execute(self, tc) -> tuple:
+        """Run a tool call. Returns (ok: bool, result: str) — ok=False counts as a quality failure."""
+        name = tc.function.name
         try:
             args = json.loads(tc.function.arguments or "{}")
         except json.JSONDecodeError:
-            return "Error: the model produced invalid arguments (invalid JSON)."
-        print(f"   🔧 {tc.function.name}({args})")
-        if is_dangerous(tc.function.name) and not self._confirm(tc.function.name, args):
-            return "USER_DENIED: the user did not allow this action."
-        return execute_skill(tc.function.name, args)
+            print(f"   🔧 {name}(invalid JSON arguments)")
+            return False, "Error: the arguments were not valid JSON. Call the tool again with correct JSON."
+        print(f"   🔧 {name}({args})")
+        if is_dangerous(name) and not self._confirm(name, args):
+            return True, "USER_DENIED: the user did not allow this action."
+        result = execute_skill(name, args)
+        print(f"      ↳ {result[:150]}")
+        return (not result.startswith("Error")), result
 
     @staticmethod
     def _confirm(name: str, args: dict) -> bool:
@@ -102,10 +141,8 @@ class Agent:
         return answer == "y"
 
     def _persistable(self) -> list:
-        """History without the system prompt (it is re-injected on startup)."""
         return [m for m in self.messages if m.get("role") != "system"]
 
     def reset(self) -> None:
-        """Start a fresh conversation."""
         self.memory.reset()
         self.messages = [{"role": "system", "content": SYSTEM_PROMPT}]

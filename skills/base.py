@@ -50,4 +50,4 @@ def execute_skill(skill_name: str, args: dict) -> str:
         result = SKILLS[skill_name]["function"](**args)
         return str(result)
     except Exception as exc:
-        return f"Error in {skill_name}: {exc}"
+        return f"Error in {skill_name}: {type(exc).__name__}: {exc}"

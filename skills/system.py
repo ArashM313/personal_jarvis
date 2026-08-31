@@ -7,6 +7,9 @@ import psutil
 import pyautogui
 import pyperclip
 
+import threading
+import winsound
+
 from skills.base import skill
 
 
@@ -74,6 +77,30 @@ def _volume_interface():
     return cast(interface, POINTER(IAudioEndpointVolume))
 
 
+
+@skill(
+    description="Set the master system volume (0 to 100).",
+    parameters={
+        "type": "object",
+        "properties": {"level": {"type": "integer", "description": "Volume percent 0-100"}},
+        "required": ["level"],
+    },
+)
+
+def _volume_by_keys(level: int) -> int:
+    """Fallback: Windows volume keys change volume by 2% per press."""
+    old_pause = pyautogui.PAUSE
+    pyautogui.PAUSE = 0.02
+    try:
+        for _ in range(50):
+            pyautogui.press("volumedown")
+        for _ in range(round(level / 2)):
+            pyautogui.press("volumeup")
+    finally:
+        pyautogui.PAUSE = old_pause
+    return level
+
+
 @skill(
     description="Set the master system volume (0 to 100).",
     parameters={
@@ -84,8 +111,15 @@ def _volume_interface():
 )
 def set_volume(level: int) -> str:
     level = max(0, min(100, int(level)))
-    _volume_interface().SetMasterVolumeLevelScalar(level / 100.0, None)
-    return f"Volume set to {level}%"
+    try:
+        _volume_interface().SetMasterVolumeLevelScalar(level / 100.0, None)
+        return f"Volume set to {level}%"
+    except Exception as exc:
+        try:
+            _volume_by_keys(level)
+            return f"Volume ≈ {level}% (keyboard fallback — pycaw error: {type(exc).__name__})"
+        except Exception as exc2:
+            return f"set_volume failed — pycaw: {type(exc).__name__}: {exc} | keyboard: {exc2}"
 
 
 @skill(
@@ -96,16 +130,14 @@ def set_volume(level: int) -> str:
         "required": ["mute"],
     },
 )
+
 def set_mute(mute: bool) -> str:
-    _volume_interface().SetMute(bool(mute), None)
-    return "Muted" if mute else "Unmuted"
-
-
-# ---------- system info ----------
-@skill(
-    description="Get a health report of the PC: CPU load, RAM usage, disk usage, battery.",
-    parameters={"type": "object", "properties": {}},
-)
+    try:
+        _volume_interface().SetMute(bool(mute), None)
+        return "Muted" if mute else "Unmuted"
+    except Exception:
+        pyautogui.press("volumemute")
+        return "Toggled mute via keyboard (pycaw unavailable)."
 def system_status() -> str:
     cpu = psutil.cpu_percent(interval=0.5)
     ram = psutil.virtual_memory().percent
@@ -201,3 +233,51 @@ def run_command(command: str) -> str:
                           capture_output=True, text=True, timeout=60)
     output = (proc.stdout + "\n" + proc.stderr).strip()
     return output[:3000] if output else "(command finished with no output)"
+
+# ---------- timer / brightness ----------
+@skill(
+    description="Start a countdown timer/reminder. When time is up, JARVIS beeps and shows "
+                "a popup with the message. Timers live only while JARVIS is running.",
+    parameters={
+        "type": "object",
+        "properties": {
+            "minutes": {"type": "number", "description": "Minutes (e.g. 1.5 = 90 seconds)"},
+            "seconds": {"type": "integer", "description": "Extra seconds (optional)"},
+            "message": {"type": "string", "description": "What to remind (optional)"},
+        },
+    },
+)
+def set_timer(minutes: float = 0, seconds: int = 0, message: str = "Time's up!") -> str:
+    total = int(float(minutes) * 60 + int(seconds))
+    if total <= 0:
+        return "Please provide a duration greater than zero."
+
+    def ring():
+        for _ in range(3):
+            winsound.Beep(1200, 350)
+        ctypes.windll.user32.MessageBoxW(0, f"⏰ {message}", "JARVIS Timer", 0x40000 | 0x40)
+
+    threading.Timer(total, ring).start()
+    nice = f"{total // 60}m {total % 60}s" if total >= 60 else f"{total}s"
+    return f"⏳ Timer set for {nice}: {message}"
+
+
+@skill(
+    description="Set the screen brightness (0 to 100). Works on laptop built-in displays.",
+    parameters={
+        "type": "object",
+        "properties": {"level": {"type": "integer", "description": "Brightness percent 0-100"}},
+        "required": ["level"],
+    },
+)
+def set_brightness(level: int) -> str:
+    try:
+        import screen_brightness_control as sbc
+    except ImportError:
+        return "screen-brightness-control is not installed."
+    level = max(0, min(100, int(level)))
+    try:
+        sbc.set_brightness(level)
+        return f"Brightness set to {level}%"
+    except Exception as exc:
+        return f"Could not change brightness (external monitor?): {type(exc).__name__}: {exc}"

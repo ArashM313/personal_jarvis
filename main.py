@@ -7,7 +7,7 @@ from skills.base import SKILLS
 
 BANNER = r"""
 ╔══════════════════════════════════════════════╗
-║      J.A.R.V.I.S  —  Phase 1: Text (Qwen)    ║
+║                 J.A.R.V.I.S                  ║
 ╚══════════════════════════════════════════════╝"""
 
 
@@ -21,7 +21,7 @@ def main():
 
     agent = Agent()
     print(BANNER)
-    print(f"   Model : {Config.LLM_MODEL}")
+    print(f"   Chain : {' → '.join(Config.MODEL_CHAIN)}")
     print(f"   API   : {Config.LLM_BASE_URL}")
     print(f"   Device: {get_device()}")
     print(f"   Skills: {len(SKILLS)} loaded")
