@@ -4,133 +4,6 @@
   "content": "",
   "tool_calls": [
    {
-    "id": "call_033bc8834c1441f68e425822",
-    "type": "function",
-    "function": {
-     "name": "set_volume",
-     "arguments": "{\"level\":100}"
-    }
-   }
-  ]
- },
- {
-  "role": "tool",
-  "tool_call_id": "call_033bc8834c1441f68e425822",
-  "content": "Volume ≈ 100% (keyboard fallback — pycaw error: NameError)"
- },
- {
-  "role": "assistant",
-  "content": "✅ انجام شد!\n\n- 🔊 **صدای سیستم:** ۱۰۰٪ (حداکثر)\n\nحالا آهنگ «لاشی» باید با حداکثر صدا پخش بشه. 🎵\n\nاگه بلندتر از حد انتظار بود یا خواستی کمش کنم، فقط بگو! 😊"
- },
- {
-  "role": "user",
-  "content": "همه صفحه رو مینیمایز کن و فقط یوتیوب که آهنگ پلی هست رو بیار"
- },
- {
-  "role": "assistant",
-  "content": "",
-  "tool_calls": [
-   {
-    "id": "call_9afc90e151ea46dea9dd305e",
-    "type": "function",
-    "function": {
-     "name": "minimize_all_windows",
-     "arguments": "{}"
-    }
-   }
-  ]
- },
- {
-  "role": "tool",
-  "tool_call_id": "call_9afc90e151ea46dea9dd305e",
-  "content": "All windows minimized (desktop shown)."
- },
- {
-  "role": "assistant",
-  "content": "",
-  "tool_calls": [
-   {
-    "id": "call_b47497ab01784035966e8d7b",
-    "type": "function",
-    "function": {
-     "name": "focus_window",
-     "arguments": "{\"title\":\"YouTube\"}"
-    }
-   }
-  ]
- },
- {
-  "role": "tool",
-  "tool_call_id": "call_b47497ab01784035966e8d7b",
-  "content": "Focused: (1538) Arta - LASHI OFFICIAL LYRICS VIDEO - YouTube and 8 more pages - Personal - Microsoft​ Edge"
- },
- {
-  "role": "assistant",
-  "content": "✅ انجام شد!\n\n- 🖥️ **همه پنجره‌ها مینیمایز شدن** — دسکتاپ خالی شد\n- 🎵 **پنجره یوتیوب فوکوس شد:** «Arta - LASHI OFFICIAL LYRICS VIDEO» در Edge\n\nحالا فقط ویدیوی آهنگ جلوی چشمته. از گوش دادن لذت ببر! 🎧\n\nاگه خواستی آهنگ بعدی رو پلی کنم یا پنجره رو ماکسیمایز کنم، بگو! 😊"
- },
- {
-  "role": "user",
-  "content": "open chess"
- },
- {
-  "role": "assistant",
-  "content": "",
-  "tool_calls": [
-   {
-    "id": "call_8cd92835c74b41c980ab1f2d",
-    "type": "function",
-    "function": {
-     "name": "run_command",
-     "arguments": "{\"command\":\"Start-Process \\\"shell:AppsFolder\\\\www.chess.com-544B9816_ecybsqtkxqbrg!App\\\"; Start-Sleep -Seconds 5; Get-Process | Where-Object { $_.MainWindowTitle -like \\\"*Chess*\\\" } | Select-Object Id, ProcessName, MainWindowTitle | Format-Table -AutoSize\"}"
-    }
-   }
-  ]
- },
- {
-  "role": "tool",
-  "tool_call_id": "call_8cd92835c74b41c980ab1f2d",
-  "content": "Id ProcessName MainWindowTitle                        \n   -- ----------- ---------------                        \n26644 msedge      Chess - Play & Learn - Home - Chess.com"
- },
- {
-  "role": "assistant",
-  "content": "✅ **Chess - Play & Learn** is open! ♟️\n\nThe window is running: **\"Chess - Play & Learn - Home - Chess.com\"** (the Microsoft Store app, as you preferred — not Google Play Games).\n\nWant me to focus or maximize it? Or are you ready to play? 😊"
- },
- {
-  "role": "user",
-  "content": "آهنگ رو استاپ کن"
- },
- {
-  "role": "assistant",
-  "content": "",
-  "tool_calls": [
-   {
-    "id": "call_ddb33c7924624de2812c04e9",
-    "type": "function",
-    "function": {
-     "name": "media_control",
-     "arguments": "{\"action\":\"playpause\"}"
-    }
-   }
-  ]
- },
- {
-  "role": "tool",
-  "tool_call_id": "call_ddb33c7924624de2812c04e9",
-  "content": "Media: playpause"
- },
- {
-  "role": "assistant",
-  "content": "✅ انجام شد!\n\n- ⏹️ **دستور توقف پخش** ارسال شد — آهنگ «لاشی» باید متوقف شده باشه.\n\nاگه هنوز پخش میشه، بگو تا با روش دیگه‌ای (مثلاً فوکوس روی پنجره یوتیوب و ارسال کلید) متوقفش کنم. چیز دیگه‌ای لازم داری؟ 😊"
- },
- {
-  "role": "user",
-  "content": "هوای تهران امروز چطوره؟"
- },
- {
-  "role": "assistant",
-  "content": "",
-  "tool_calls": [
-   {
     "id": "call_5c3685a360104fd69b52ad6e",
     "type": "function",
     "function": {
@@ -598,5 +471,142 @@
  {
   "role": "assistant",
   "content": "I wrote a fun Python magic spell script and opened it in Notepad for you."
+ },
+ {
+  "role": "user",
+  "content": "open my file explorer"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_8e8ddec72e0b44f9b612c547",
+    "type": "function",
+    "function": {
+     "name": "open_app",
+     "arguments": "{\"target\":\"explorer\"}"
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_8e8ddec72e0b44f9b612c547",
+  "content": "Opened: explorer"
+ },
+ {
+  "role": "assistant",
+  "content": "File Explorer is open."
+ },
+ {
+  "role": "user",
+  "content": "Focus on it."
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_5c0cd6ae1efe494fa9b5ee74",
+    "type": "function",
+    "function": {
+     "name": "focus_window",
+     "arguments": "{\"title\":\"File Explorer\"}"
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_5c0cd6ae1efe494fa9b5ee74",
+  "content": "Error in focus_window: PyGetWindowException: Error code from Windows: 0 - The operation completed successfully."
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_e4e5f7553f0546fa80dfe637",
+    "type": "function",
+    "function": {
+     "name": "list_open_windows",
+     "arguments": "{}"
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_e4e5f7553f0546fa80dfe637",
+  "content": "1. [maximized] J.A.R.V.I.S and 9 more pages - Personal - Microsoft​ Edge\n2. [maximized] Jarvis\n3. [minimized] Z.ai - Advanced AI Chatbot & Agent powered by GLM-5.3-Flash\n4. [minimized] SoftEther VPN Client Manager\n5. [normal] Command Palette\n6. [normal] PowerToys Quick Access (Preview)\n7. [normal] Windows Input Experience\n8. [normal] Search bar\n9. [maximized] This PC - File Explorer\n10. [normal] Program Manager"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_d36dd97c8e4048e3a26036de",
+    "type": "function",
+    "function": {
+     "name": "focus_window",
+     "arguments": "{\"title\":\"This PC - File Explorer\"}"
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_d36dd97c8e4048e3a26036de",
+  "content": "Error in focus_window: PyGetWindowException: Error code from Windows: 0 - The operation completed successfully."
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_f8aac3be50e44699baa471c9",
+    "type": "function",
+    "function": {
+     "name": "run_command",
+     "arguments": "{\"command\":\"Add-Type @'\\nusing System;\\nusing System.Runtime.InteropServices;\\npublic class Win {\\n  [DllImport(\\\"user32.dll\\\")] public static extern bool SetForegroundWindow(IntPtr hWnd);\\n  [DllImport(\\\"user32.dll\\\")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);\\n}\\n'@\\n$p = Get-Process explorer | Where-Object { $_.MainWindowTitle -like '*This PC*' } | Select-Object -First 1\\nif ($p) { [Win]::ShowWindow($p.MainWindowHandle, 9) | Out-Null; [Win]::SetForegroundWindow($p.MainWindowHandle) | Out-Null; 'Focused: ' + $p.MainWindowTitle } else { 'Not found' }\"}"
+    }
+   }
+  ]
+ },
+ {
+  "role": "user",
+  "content": "Are you there?"
+ },
+ {
+  "role": "assistant",
+  "content": "Yes, I'm here! It seems my last command to focus File Explorer didn't complete. Let me try again:",
+  "tool_calls": [
+   {
+    "id": "call_4757917bd047469bbc40dd94",
+    "type": "function",
+    "function": {
+     "name": "focus_window",
+     "arguments": "{\"title\":\"This PC\"}"
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_4757917bd047469bbc40dd94",
+  "content": "Focused: This PC - File Explorer"
+ },
+ {
+  "role": "assistant",
+  "content": "File Explorer is now focused and in front."
+ },
+ {
+  "role": "user",
+  "content": "got this"
+ },
+ {
+  "role": "assistant",
+  "content": "Great! File Explorer is up and focused. Let me know if you need anything else — opening a folder, searching files, or anything else."
  }
 ]
