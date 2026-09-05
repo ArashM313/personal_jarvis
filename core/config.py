@@ -23,6 +23,14 @@ def _csv(raw: str) -> list:
 
 
 class Config:
+
+    # --- Google Gemini (shared key: falls back to LLM_API_KEY) ---
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "") or os.getenv("LLM_API_KEY", "")
+    GEMINI_STT_MODEL = os.getenv("GEMINI_STT_MODEL", "gemini-2.5-flash")
+    GEMINI_TTS_MODEL = os.getenv("GEMINI_TTS_MODEL", "gemini-2.5-flash-preview-tts")
+    GEMINI_TTS_VOICE = os.getenv("GEMINI_TTS_VOICE", "Charon")
+    TTS_PROVIDER = os.getenv("TTS_PROVIDER", "gemini")            # gemini | edge
+
     # --- brain (LLM) ---
     LLM_API_KEY = os.getenv("LLM_API_KEY", "")
     LLM_BASE_URL = os.getenv("LLM_BASE_URL",

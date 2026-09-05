@@ -85,7 +85,8 @@ class GuiInterface:
             data = await req.body()
             try:
                 clip, _sr = sf.read(io.BytesIO(data), dtype="float32")
-                text = self.engine.transcribe_blocking(clip).strip()
+                text = await asyncio.to_thread(self.engine.transcribe_blocking, clip)
+                text = (text or "").strip()
             except Exception as exc:
                 return JSONResponse({"error": f"STT failed: {type(exc).__name__}"}, status_code=500)
             if not text:

@@ -92,10 +92,12 @@ class VoiceEngine:
         return self._main_stt.transcribe(audio).strip()
 
     def set_awake(self, value: bool) -> None:
+        """Safe to call from ANY thread, including async event loops:
+        the greeting/sleep audio runs in its own worker thread."""
         if value and not self.awake:
-            self._wake()
+            threading.Thread(target=self._wake, daemon=True).start()
         elif not value and self.awake:
-            self._sleep()
+            threading.Thread(target=self._sleep, daemon=True).start()
 
     # ═══ mic thread ═══
     def _mic_loop(self):
@@ -230,25 +232,18 @@ class VoiceEngine:
             self._sleep(auto=True)
 
     def _speak(self, text: str) -> None:
+        from core.tts import speak as tts_speak
         clean = EMOJI_RE.sub(" ", re.sub(r"[*_`#>|]", "", text)).strip()
         if not clean.strip():
             return
-        voice = Config.VOICE_FA if self._looks_persian(clean) else Config.VOICE_EN
-        path = os.path.join(self._tmp, f"resp_{int(time.time() * 1000)}.mp3")
         with self._speak_lock:
             self._mic_muted.set()
             self.bus.publish("state", value="speaking")
             try:
-                import edge_tts
-                asyncio.run(edge_tts.Communicate(clean, voice=voice).save(path))
-                data, sr = sf.read(path, dtype="float32")
-                sd.play(data, sr)
-                sd.wait()
+                tts_speak(clean)
             except Exception as exc:
                 print(f"   ⚠️ TTS failed ({type(exc).__name__}: {exc}) — text only.")
             finally:
-                if os.path.exists(path):
-                    os.remove(path)
                 self._mic_muted.clear()
                 self.bus.publish("state", value="awake" if self.awake else "sleeping")
 
